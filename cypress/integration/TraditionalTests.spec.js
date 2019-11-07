@@ -164,7 +164,7 @@ describe('Logged in, Canvas Chart Test', () => {
             ** Better use Visual Testing here
             */
         // @Todo: Extract visit and login with a fast and stable API call (login doesn't need to be tested again here)
-            cy.visit('/hackathon.html')
+            cy.visit('/hackathonV2.html')
             cy.get('#username').type('johnDoe')
             cy.get('#password').type('1234')
             cy.get('#log-in').click()
