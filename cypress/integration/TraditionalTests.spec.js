@@ -1,5 +1,4 @@
 /// <reference types="cypress" />
-var numeral = require('numeral');
 
 describe('Login Page UI Elements Test', () => {
     it('should diplay the login page with all elements', () => {
