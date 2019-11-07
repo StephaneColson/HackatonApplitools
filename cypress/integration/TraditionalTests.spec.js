@@ -1,18 +1,19 @@
 /// <reference types="cypress" />
+var numeral = require('numeral');
 
 describe('Login Page UI Elements Test', () => {
     it('should diplay the login page with all elements', () => {
         cy.visit('/hackathon.html')
     
         // Check all logos, pictures
-        cy.get('.logo-w > a > img').should('be.visible')
+        cy.get('.logo-w').should('be.visible')
         cy.get(':nth-child(1) > .pre-icon').should('be.visible')
         cy.get(':nth-child(2) > .pre-icon').should('be.visible')
         cy.get('[style="display: inline-block; margin-bottom:4px;"] > img').should('be.visible')
         cy.get(':nth-child(2) > img').should('be.visible')
         cy.get(':nth-child(3) > img').should('be.visible')
     
-        // Check all abels
+        // Check all text labels
         cy.get('.auth-header').should('contain.text', 'Login Form')
         cy.get(':nth-child(1) > label').should('have.text', 'Username')
         cy.get('form > :nth-child(2) > label').should('have.text', 'Password')
@@ -32,48 +33,54 @@ describe('Login Page UI Elements Test', () => {
 })
 
 describe('Login Data-Driven Test', () => {
+    beforeEach(() => {
+		cy.visit('/hackathon.html')
+	})
     it('should show an error if no username and no password', () => {
-        cy.visit('/hackathon.html')
-
         cy.get('#log-in').click();
         // because there's a randoom id here, I use the class path
         cy.get('.alert.alert-warning').should('contain.text','Both Username and Password must be present')
     })
 
     it('should show an error if password is missing', () => {
-        cy.visit('/hackathon.html')
-
         cy.get('#username').type('johnDoe')
-
         cy.get('#log-in').click();
-        // because there's a randoom id here, I use the class path
         cy.get('.alert.alert-warning').should('contain.text','Password must be present')
     })
 
     it('should show an error if username is missing', () => {
-        cy.visit('/hackathon.html')
-
         cy.get('#password').type('1234')
-
         cy.get('#log-in').click();
-        // because there's a randoom id here, I use the class path
         cy.get('.alert.alert-warning').should('contain.text','Username must be present')
     })
 
     it('should log in if both username and password are filled', () => {
-        cy.visit('/hackathon.html')
         cy.get('#username').type('johnDoe')
         cy.get('#password').type('1234')
-
         cy.get('#log-in').click()
         // Redirected to https://demo.applitools.com/hackathonApp.html
         cy.url().should('eq','https://demo.applitools.com/hackathonApp.html')
+        // Logged user visible
+        cy.get('.logged-user-i').should('be.visible')
     })
 })
 
-describe('Logged in, Table Sort Test', () => { // @TODO Assertions missing
+describe('Logged in, Table Sort Test', () => {
     it('should display rows in ascending order', () => {
-    // @Todo: Extract visit and login with a fast and stable API call (login is already tested)
+        /*
+        ** Here I tried to test what's required but we shouldn't do it this way. I had hard time
+        ** with the amounts strings and didn't find a library to help with this. At least, I was able to check that
+        ** after sorting the table, then the first line is the minimum amount and the last one the max.
+        ** I also check that description is the correct one.
+        ** This is something that should be done with Visual Testing
+        */
+        var minAmount=10000
+        var descMin=""
+        var maxAmount=0
+        var descMax=""
+        var tmpDesc=""
+        var tmpAMount=""
+        // @Todo: Extract visit and login with an API call (login is already tested)
         cy.visit('/hackathon.html')
         cy.get('#username').type('johnDoe')
         cy.get('#password').type('1234')
@@ -92,51 +99,68 @@ describe('Logged in, Table Sort Test', () => { // @TODO Assertions missing
             transactionSorted[row] = new Array(2) // only 2 columns (desc and amount)
 
         }
-
         // fill the 2 dimension array with content of transaction table (only Desc and amount column)
-        cy.get('#transactionsTable').within(() => {
-            for (var row = 1; row < 7; row++) {// starts from 1 to avoid titles
-                cy.get('tr').eq(row).within(() => {
-                    cy.get('.cell-with-media').invoke('text').then((text1) => {
-                        console.log("desc: " +text1)
-                        transactionNotSorted[row-1][0] = text1
-                    })
-
-                    cy.get('.text-right').invoke('text').then((text2) => {
-                        console.log("Amount: " +text2)
-                        transactionNotSorted[row-1][1] = text2
-                    })
+        // Save the min amount with description, same with max amount. Will be checked after sorting
+        for (var row = 1; row < 7; row++) {// starts from 1 to avoid titles
+            cy.get('tr').eq(row).within(() => {
+                cy.get('.cell-with-media').invoke('text').then((text1) => {
+                     transactionNotSorted[row-1][0] = text1
+                    tmpDesc=text1
                 })
-            }
-        })
 
+                /*Need to work on amount string to convert to a float bc of '-' ',' and USD
+                and search the min and max and retrieve description.
+                @TODO: I should probably use a library, but didn't find the perfect fit & this
+                is probably not part of the exercise. At least I tried and learn new things :) */                    
+                cy.get('.text-right').invoke('text').then((text2) => {
+                    text2=text2.trim().replace(',','')
+                    transactionNotSorted[row-1][1] = text2
+                    var cursor=text2.indexOf(" USD")
+                    var amount = parseFloat(text2.substring(2,cursor).trim())                        
+                    if (text2.substring(0,1)==='-') {
+                        amount = -Math.abs(amount);
+                    }
+                        
+                    if (amount<minAmount) {
+                        minAmount=amount
+                        descMin=tmpDesc
+                    }
+                    if (amount>maxAmount) {
+                        maxAmount=amount
+                        descMax=tmpDesc
+                    }
+                })
+            })
+                
+        }
+
+        /*Check that first line contains desc and amount of the minimum amount line before sorting
+        and check that last line contains desc and amount of the max amount line*/
         cy.get('#amount').click() // Sort the table with amount column
         cy.get('#transactionsTable').within(() => {
-            for (var row = 1; row < 7; row++) {// starts from 1 to avoid titles
-                cy.get('tr').eq(row).within(() => {
-                    cy.get('.cell-with-media').invoke('text').then((text1) => {
-                        console.log("desc: " +text1)
-                        transactionSorted[row-1][0] = text1
-                    })
-
-                    cy.get('.text-right').invoke('text').then((text2) => {
-                        console.log("Amount: " +text2)
-                        transactionSorted[row-1][1] = text2
-                    })
-                })
-            }
+            cy.get('tr').eq(1).within(() => { //Check first line
+                cy.get('.cell-with-media').should('contains.text',descMin)
+                cy.get('.text-right').should('contains.text',minAmount.toString().replace('-','- '))
+            })
+            cy.get('tr').eq(6).within(() => { //Check last line
+                cy.get('.cell-with-media').should('contains.text',descMax)
+                //maxAmount is 1250 instead of 1,250. This check will fail is max is different
+                cy.get('.text-right').should('contains.text',"1,250")
+            })
         })
-        // @TODO: Reste à vérifier que c'est bien classé en ascendant et que les données sont correctes
     })
 })
 
 describe('Logged in, Canvas Chart Test', () => {
     it('should display compare expenses bar', () => {
-        // @Todo: Extract visit and login with a fast and stable API call (login is already tested)
+            /* It seems hard to do something with the content of the canvas
+            ** Better use Visual Testing here
+            */
+        // @Todo: Extract visit and login with a fast and stable API call (login doesn't need to be tested again here)
             cy.visit('/hackathon.html')
             cy.get('#username').type('johnDoe')
             cy.get('#password').type('1234')
-            cy.get('#log-in').click()  
+            cy.get('#log-in').click()
 
             cy.get('#showExpensesChart').click()
             //assert that canvas is visible. Will be tested with visual testing
@@ -144,7 +168,7 @@ describe('Logged in, Canvas Chart Test', () => {
 
             // adds nextYear dataSet
             cy.get('#addDataset').click()
-            //@What can be asserted here except that canvas is still visible
+            // We just check that canvas is visible and that we can point in it
             cy.get('#canvas')
                 .should('be.visible')
                 .trigger('pointerdown','center')
