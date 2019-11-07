@@ -4,7 +4,8 @@
 https://applitools.com/hackathon-instructions
 
 ## Prerequisites
-- Cypress.io (tested with version 3.6.0)
+- Cypress.io (tested with version 3.6.0): `npm install cypress`
+- Applitools Eyes: `npm install @applitools/eyes-cypress`
 - Chrome and ChromeDriver (tested with version 78.0.3904.87 (Official Build) (64-bit)
 
 ## How to run
